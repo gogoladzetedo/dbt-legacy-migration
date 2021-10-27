@@ -9,13 +9,13 @@ select
     round(amount/100.0,2) as order_value_dollars,
     orders.status as order_status,
     payments.status as payment_status
-from dbt_migration_tedo.orders as orders
+from  {{ source('dbt_migration_tedo', 'orders') }} as orders
 
 join (
       select 
         first_name || ' ' || last_name as name, 
         * 
-      from dbt_migration_tedo.customers
+      from {{ source('dbt_migration_tedo', 'customers') }}
 ) customers
 on orders.user_id = customers.id
 
@@ -39,18 +39,18 @@ join (
       select 
         row_number() over (partition by user_id order by order_date, id) as user_order_seq,
         *
-      from dbt_migration_tedo.orders
+      from {{ source('dbt_migration_tedo', 'orders') }} 
     ) a
 
     join ( 
       select 
         first_name || ' ' || last_name as name, 
         * 
-      from dbt_migration_tedo.customers
+      from {{ source('dbt_migration_tedo', 'customers') }}
     ) b
     on a.user_id = b.id
 
-    left outer join dbt_migration_tedo.payments c
+    left outer join {{ source('dbt_migration_tedo', 'payments') }} c
     on a.id = c.orderid
 
     where a.status NOT IN ('pending') and c.status != 'fail'
@@ -60,7 +60,7 @@ join (
 ) customer_order_history
 on orders.user_id = customer_order_history.customer_id
 
-left outer join dbt_migration_tedo.payments payments
+left outer join {{ source('dbt_migration_tedo', 'payments') }} payments
 on orders.id = payments.orderid
 
 where payments.status != 'fail'
